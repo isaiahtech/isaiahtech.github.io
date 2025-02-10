@@ -15,30 +15,31 @@ canvas {
     transform: translate(-50%, -50%);
     color: rgba(0, 123, 255, 0.6);
     font-family: 'Orbitron', sans-serif;
-    font-size: 36px;
+    font-size: 46px;
     font-weight: bold;
     pointer-events: none;
-	z-index: 10;
-}
-
-#linkedinContainer {
-    position: absolute;
-    top: calc(50% + 30px);  /* Reduced vertical offset */
-    left: 50%;
-    transform: translateX(-50%);
     z-index: 10;
 }
 
-#linkedinContainer a {
-	color: rgba(0, 100, 200, 0.8); /* Darker blue, less transparent */
+#socialLinks {
+    position: absolute;
+    top: calc(50% + 30px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex; /* Use flexbox for easy horizontal layout */
+    gap: 20px;      /* Space between the icons */
+}
+#socialLinks a {
+    color: rgba(0, 100, 200, 0.8);
     text-decoration: none;
     display: inline-block;
     padding: 10px;
     border-radius: 10px;
     font-size: 48px;
+    transition: color 0.2s ease; /* Smooth color transition on hover */
 }
 
-
-#linkedinContainer a:hover{
-	color: rgba(0, 123, 255, 1);
+#socialLinks a:hover {
+    color: rgba(0, 123, 255, 1);
 }
