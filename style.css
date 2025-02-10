@@ -13,13 +13,18 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    /* Increased opacity and made the color slightly brighter */
-    color: rgba(0, 153, 255, 0.8); /* Brighter and more opaque */
+    color: rgba(0, 153, 255, 0.8);
     font-family: 'Orbitron', sans-serif;
     font-size: 46px;
     font-weight: bold;
     pointer-events: none;
     z-index: 10;
+    transition: color 0.3s ease;
+}
+
+/* Change text color when slider is active */
+#sliderIcon.active ~ #textContainer {
+    color: red;
 }
 
 #socialLinks {
@@ -28,21 +33,71 @@ canvas {
     left: 50%;
     transform: translateX(-50%);
     z-index: 10;
-    display: flex; /* Use flexbox for easy horizontal layout */
-    gap: 20px;        /* Space between the icons */
+    display: flex;
+    gap: 20px;
 }
 
 #socialLinks a {
-    /* Left this as is, the hover will still be brighter */
     color: rgba(0, 100, 200, 0.8);
     text-decoration: none;
     display: inline-block;
     padding: 10px;
     border-radius: 10px;
     font-size: 48px;
-    transition: color 0.2s ease; /* Smooth color transition on hover */
+    transition: color 0.2s ease;
 }
 
 #socialLinks a:hover {
     color: rgba(0, 123, 255, 1);
+}
+
+/* Change social link colors when slider is active */
+#sliderIcon.active ~ #socialLinks a {
+    color: darkred; /* Darker red when active */
+}
+
+/* Hover state for social icons when slider is active */
+#sliderIcon.active ~ #socialLinks a:hover {
+    color: red; /* Brighter red on hover */
+}
+
+/* Slider Icon Styles */
+#sliderIcon {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 20;
+    cursor: pointer;
+    opacity: 0.75;
+}
+
+.pill-outer {
+    width: 80px;
+    height: 40px;
+    border: 2px solid rgba(0, 153, 255, 0.8);
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.3s ease;
+}
+
+#sliderIcon.active .pill-outer {
+    border-color: red;
+}
+
+.pill-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background-color: rgba(0, 153, 255, 0.8);
+    border-radius: 18px 0 0 18px;
+    transition: transform 0.3s ease, background-color 0.3s ease, border-radius 0.3s ease;
+}
+
+#sliderIcon.active .pill-inner {
+    transform: translateX(100%);
+    background-color: red;
+    border-radius: 0 18px 18px 0;
 }
