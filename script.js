@@ -11,6 +11,7 @@ const starsCount = 10000;
 const starsPosArray = new Float32Array(starsCount * 3);
 const starsSizeArray = new Float32Array(starsCount);
 const starsOpacityArray = new Float32Array(starsCount);
+const starsColorArray = new Float32Array(starsCount * 3);
 
 for (let i = 0; i < starsCount; i++) {
     const i3 = i * 3;
@@ -20,34 +21,52 @@ for (let i = 0; i < starsCount; i++) {
 
     starsSizeArray[i] = Math.random() * 1.5 + 0.5;
     starsOpacityArray[i] = Math.random() * 0.6 + 0.4;
+
+    // Assign colors randomly
+    const color = new THREE.Color();
+    const randomColor = Math.random();
+    if (randomColor < 0.33) {
+        // Various shades of green
+        const greenShade = Math.random() * 0.6 + 0.4;
+        color.setRGB(0, greenShade, 0);
+    } else if (randomColor < 0.66) {
+        // Light blue (pale cyan)
+        color.setRGB(0.6, 0.8, 1.0);
+    } else {
+        color.set(0xffffff); // White
+    }
+    starsColorArray[i3] = color.r;
+    starsColorArray[i3 + 1] = color.g;
+    starsColorArray[i3 + 2] = color.b;
 }
 
 starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPosArray, 3));
 starsGeometry.setAttribute('size', new THREE.BufferAttribute(starsSizeArray, 1));
 starsGeometry.setAttribute('opacity', new THREE.BufferAttribute(starsOpacityArray, 1));
+starsGeometry.setAttribute('color', new THREE.BufferAttribute(starsColorArray, 3));
 
 const starsMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-        color: { value: new THREE.Color(0xffffff) }
-    },
     vertexShader: `
         attribute float size;
         attribute float opacity;
+        attribute vec3 color;
         varying float vOpacity;
+        varying vec3 vColor;
         void main() {
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
             gl_PointSize = size * (300.0 / -mvPosition.z);
             gl_Position = projectionMatrix * mvPosition;
             vOpacity = opacity;
+            vColor = color;
         }
     `,
     fragmentShader: `
-        uniform vec3 color;
         varying float vOpacity;
+        varying vec3 vColor;
         void main() {
             float distance = length(gl_PointCoord - vec2(0.5));
             float alpha = 1.0 - smoothstep(0.4, 0.5, distance);
-            gl_FragColor = vec4(color, alpha * vOpacity);
+            gl_FragColor = vec4(vColor, alpha * vOpacity);
         }
     `,
     blending: THREE.AdditiveBlending,
@@ -79,16 +98,15 @@ scene.add(directionalLight);
 // --- Camera Positioning ---
 camera.position.z = 30;
 
-// --- Mouse Interaction ---
+// --- Mouse Interaction --- (No changes)
 let mouseX = 0;
 let mouseY = 0;
-const rotationSpeed = 0.0025; // Changed rotation speed
+const rotationSpeed = 0.0025;
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
-let dragRotationX = 0; // Store accumulated drag rotation
+let dragRotationX = 0;
 let dragRotationY = 0;
 
-// Mousemove for continuous rotation
 renderer.domElement.addEventListener('mousemove', (event) => {
     mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -99,7 +117,6 @@ renderer.domElement.addEventListener('mousemove', (event) => {
             y: event.clientY - previousMousePosition.y,
         };
 
-        // Accumulate drag rotation
         dragRotationX += deltaMove.y * rotationSpeed;
         dragRotationY += deltaMove.x * rotationSpeed;
 
@@ -107,71 +124,56 @@ renderer.domElement.addEventListener('mousemove', (event) => {
       }
 });
 
-// Mousedown for drag start
 renderer.domElement.addEventListener('mousedown', (event) => {
     isDragging = true;
     previousMousePosition = { x: event.clientX, y: event.clientY };
 });
 
-// Mouseup for drag end
 renderer.domElement.addEventListener('mouseup', () => {
     isDragging = false;
 });
 
 
-// --- Device Orientation (Mobile) ---
+// --- Device Orientation (Mobile) --- (No changes)
 let deviceRotationX = 0;
 let deviceRotationY = 0;
-const deviceRotationSpeed = 0.01; // Adjust sensitivity as needed
+const deviceRotationSpeed = 0.01;
 
-// Feature detection for device orientation support
 if ('ondeviceorientation' in window) {
     window.addEventListener('deviceorientation', (event) => {
-        // Normalize and adjust angles.  Different devices may handle orientation differently.
-        // We use gamma for side-to-side tilt (around the y-axis) and beta for front-to-back tilt (around the x-axis).
-        // We might need to negate values or swap beta/gamma depending on the device.  Testing is crucial.
+        let tiltX = event.beta;
+        let tiltY = event.gamma;
 
-        // Assuming a landscape orientation as primary. Adjust if portrait is the primary orientation.
-        let tiltX = event.beta;  // Front-to-back
-        let tiltY = event.gamma; // Side-to-side
-
-        // Negate and scale to control direction and sensitivity.
-        deviceRotationX = tiltX * deviceRotationSpeed * -1; // Adjust multiplier as needed
-        deviceRotationY = tiltY * deviceRotationSpeed * -1; // Adjust multiplier as needed
+        deviceRotationX = tiltX * deviceRotationSpeed * -1;
+        deviceRotationY = tiltY * deviceRotationSpeed * -1;
     });
 }
 
 
-// --- Animation Loop ---
+// --- Animation Loop --- (No changes)
 function animate() {
     requestAnimationFrame(animate);
 
-    // Apply continuous rotation based on mouse position
     stars.rotation.x += mouseY * rotationSpeed;
     stars.rotation.y += mouseX * rotationSpeed;
 
     foregroundSphere.rotation.x += mouseY * rotationSpeed;
     foregroundSphere.rotation.y += mouseX * rotationSpeed;
 
-    // Apply additional rotation from dragging
     stars.rotation.x += dragRotationX;
     stars.rotation.y += dragRotationY;
     foregroundSphere.rotation.x += dragRotationX;
     foregroundSphere.rotation.y += dragRotationY;
 
-    // Reset drag rotation each frame.
     dragRotationX = 0;
     dragRotationY = 0;
 
-
-    // Apply device orientation rotation (only if supported)
     if ('ondeviceorientation' in window) {
         stars.rotation.x += deviceRotationX;
         stars.rotation.y += deviceRotationY;
         foregroundSphere.rotation.x += deviceRotationX;
         foregroundSphere.rotation.y += deviceRotationY;
 
-        // Reset device rotation.
         deviceRotationX = 0;
         deviceRotationY = 0;
     }
@@ -181,7 +183,6 @@ function animate() {
 
 animate();
 
-// --- Handle Window Resize ---
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
