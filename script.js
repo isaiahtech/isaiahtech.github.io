@@ -103,7 +103,7 @@ const foregroundSphereGeometry = new THREE.SphereGeometry(11.25, 32, 32);
 const foregroundSphereMaterial = new THREE.MeshBasicMaterial({
     color: 0x000000,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.6,
 });
 
 const foregroundSphere = new THREE.Mesh(foregroundSphereGeometry, foregroundSphereMaterial);
