@@ -13,7 +13,8 @@ canvas {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: rgba(0, 123, 255, 0.6);
+    /* Increased opacity and made the color slightly brighter */
+    color: rgba(0, 153, 255, 0.8); /* Brighter and more opaque */
     font-family: 'Orbitron', sans-serif;
     font-size: 46px;
     font-weight: bold;
@@ -28,9 +29,11 @@ canvas {
     transform: translateX(-50%);
     z-index: 10;
     display: flex; /* Use flexbox for easy horizontal layout */
-    gap: 20px;      /* Space between the icons */
+    gap: 20px;        /* Space between the icons */
 }
+
 #socialLinks a {
+    /* Left this as is, the hover will still be brighter */
     color: rgba(0, 100, 200, 0.8);
     text-decoration: none;
     display: inline-block;
