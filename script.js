@@ -95,8 +95,8 @@ renderer.domElement.addEventListener('mousemove', (event) => {
 
     if (isDragging) {
         const deltaMove = {
-          x: event.clientX - previousMousePosition.x,
-          y: event.clientY - previousMousePosition.y,
+            x: event.clientX - previousMousePosition.x,
+            y: event.clientY - previousMousePosition.y,
         };
 
         // Accumulate drag rotation
@@ -119,6 +119,29 @@ renderer.domElement.addEventListener('mouseup', () => {
 });
 
 
+// --- Device Orientation (Mobile) ---
+let deviceRotationX = 0;
+let deviceRotationY = 0;
+const deviceRotationSpeed = 0.01; // Adjust sensitivity as needed
+
+// Feature detection for device orientation support
+if ('ondeviceorientation' in window) {
+    window.addEventListener('deviceorientation', (event) => {
+        // Normalize and adjust angles.  Different devices may handle orientation differently.
+        // We use gamma for side-to-side tilt (around the y-axis) and beta for front-to-back tilt (around the x-axis).
+        // We might need to negate values or swap beta/gamma depending on the device.  Testing is crucial.
+
+        // Assuming a landscape orientation as primary. Adjust if portrait is the primary orientation.
+        let tiltX = event.beta;  // Front-to-back
+        let tiltY = event.gamma; // Side-to-side
+
+        // Negate and scale to control direction and sensitivity.
+        deviceRotationX = tiltX * deviceRotationSpeed * -1; // Adjust multiplier as needed
+        deviceRotationY = tiltY * deviceRotationSpeed * -1; // Adjust multiplier as needed
+    });
+}
+
+
 // --- Animation Loop ---
 function animate() {
     requestAnimationFrame(animate);
@@ -136,9 +159,22 @@ function animate() {
     foregroundSphere.rotation.x += dragRotationX;
     foregroundSphere.rotation.y += dragRotationY;
 
-    // Reset drag rotation each frame.  This is key!
+    // Reset drag rotation each frame.
     dragRotationX = 0;
     dragRotationY = 0;
+
+
+    // Apply device orientation rotation (only if supported)
+    if ('ondeviceorientation' in window) {
+        stars.rotation.x += deviceRotationX;
+        stars.rotation.y += deviceRotationY;
+        foregroundSphere.rotation.x += deviceRotationX;
+        foregroundSphere.rotation.y += deviceRotationY;
+
+        // Reset device rotation.
+        deviceRotationX = 0;
+        deviceRotationY = 0;
+    }
 
     renderer.render(scene, camera);
 }
