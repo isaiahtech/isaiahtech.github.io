@@ -80,7 +80,7 @@ const starsMaterial = new THREE.ShaderMaterial({
             float distance = length(gl_PointCoord - vec2(0.5));
             float alpha = 1.0 - smoothstep(0.4, 0.5, distance);
 
-            vec3 glowColor = vColor * 3.0;
+            vec3 glowColor = vColor * 5.0;
             float glowIntensity = vGlow * pulse * (1.0 - smoothstep(0.4, 0.5, distance));
             vec4 finalColor = vec4(vColor + glowColor * glowIntensity, alpha * vOpacity);
 
