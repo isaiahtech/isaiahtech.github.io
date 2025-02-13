@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dotted Globe (Flicker Fix Attempt)</title>
+    <style>
+        /* Ensure these styles are applied IMMEDIATELY */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: #000; /* Black background for body */
+        }
+        canvas {
+            display: block;
+            background-color: #000; /* Black background for canvas */
+        }
+        #placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #000;
+            z-index: 2;
+        }
+        #placeholder svg {
+            width: 50%;
+            height: auto;
+        }
+        /* Style for the return button */
+        #returnButton {
+          position: absolute;
+          top: 10%; /* Position from the top */
+          left: 50%;
+          transform: translateX(-50%); /* Center horizontally */
+          z-index: 10;
+          color: rgba(0, 50, 100, 0.8); /* Darker blue */
+          font-size: 48px; /* 2x larger */
+          text-decoration: none;
+          cursor: pointer;
+          transition: color 0.3s ease; /* Smooth color transition */
+        }
+        #returnButton:hover{
+            color: rgba(0, 153, 255, 0.8); /* Lighter blue on hover */
+        }
+
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <script>
+        // Preload the image (optional, but can help)
+        const preloadImage = new Image();
+        preloadImage.src = 'world-map-small.png';
+
+        // Force initial render (use with caution)
+        window.onload = () => {
+            document.body.offsetHeight; // This forces a reflow
+
+        // --- (Rest of your Three.js code goes here) ---
+    </script>
+
+</head>
+<body>
+    <div id="error-message" style="color: red;"></div>
+
+    <div id="placeholder">
+       <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="128" cy="128" r="128" fill="url(#paint0_radial_10_2)"/>
+            <defs>
+                <radialGradient id="paint0_radial_10_2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 128) rotate(90) scale(128)">
+                    <stop stop-color="#222222"/>
+                    <stop offset="1" stop-color="#222222" stop-opacity="0"/>
+                </radialGradient>
+            </defs>
+        </svg>
+    </div>
+
+    <canvas id="globe-canvas"></canvas>
+     <a id="returnButton" href="index.html" aria-label="Return to Homepage">
+        <i class="fas fa-home"></i>
+    </a>
+
+    <script>
+        //Moved variables up
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 2.5;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('globe-canvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000);
+
+        const sphereRadius = 1;
+        const DEG2RAD = Math.PI / 180;
+
+        // --- Image Loading ---
+        const loader = new THREE.TextureLoader();
+        let mapTexture;
+        let mapData;
+        let imageWidth, imageHeight;
+        let isFirstFrameRendered = false;
+
+        loader.load(
+            'world-map-small.png', // Local path
+            (texture) => {
+                mapTexture = texture;
+                mapTexture.minFilter = THREE.NearestFilter;
+                mapTexture.magFilter = THREE.NearestFilter;
+                getImageData(mapTexture);
+            },
+            undefined,
+            (error) => {
+                console.error('Error loading texture:', error);
+                document.getElementById('error-message').textContent = 'Error loading image.';
+            }
+        );
+
+        function getImageData(texture) {
+            const image = texture.image;
+            imageWidth = image.width;
+            imageHeight = image.height;
+            const canvas = document.createElement('canvas');
+            canvas.width = imageWidth;
+            canvas.height = imageHeight;
+            const context = canvas.getContext('2d');
+            if (!context) {
+                console.error("Could not get 2D context.");
+                document.getElementById('error-message').textContent = 'Canvas context error.';
+                return;
+            }
+            context.drawImage(image, 0, 0, imageWidth, imageHeight);
+            try {
+                mapData = context.getImageData(0, 0, imageWidth, imageHeight).data;
+                createDottedGlobe(); // Create the globe
+            } catch (e) {
+                console.error("Error getting image data:", e);
+                document.getElementById('error-message').textContent = 'Error processing image data.';
+            }
+        }
+
+        function visibilityForCoordinate(long, lat) {
+            if (!mapData) return false;
+            const x = Math.floor(((long + 180) / 360) * imageWidth);
+            const y = Math.floor(((-lat + 90) / 180) * imageHeight);
+            const index = (y * imageWidth + x) * 4;
+            if (index < 0 || index >= mapData.length) return false;
+            const alpha = mapData[index + 3];
+            return alpha >= 90;
+        }
+
+        // --- Circle Generation ---
+        function createDottedGlobe() {
+            const dotDensity = 25;
+            const rows = 100;
+            const dotGroup = new THREE.Group();
+            scene.add(dotGroup);
+
+            const circleGeometry = new THREE.CircleGeometry(0.005, 8);
+            const circleMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    fadeThreshold: { value: 0.9 },
+                    alphaFallOff: { value: 5.0 },
+                    map: {value: mapTexture}
+                },
+                vertexShader: `
+                    varying vec3 vPosition;
+                    void main() {
+                        vPosition = position;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vPosition;
+                    uniform float fadeThreshold;
+                    uniform float alphaFallOff;
+                    uniform sampler2D map;
+
+                    void main() {
+                        vec4 color = texture2D(map, gl_PointCoord);
+                        float z = gl_FragCoord.z;
+                        float alpha = 1.0;
+
+                        if (z > fadeThreshold) {
+                            alpha = 1.0 + (fadeThreshold - z) * alphaFallOff;
+                        }
+
+                        gl_FragColor = vec4(0.0, 1.0, 0.0, alpha);
+                        if (gl_FragColor.a <= 0.0) discard;
+                    }
+                `,
+                transparent: true,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            for (let lat = -90; lat <= 90; lat += 180 / rows) {
+                const radius = Math.cos(Math.abs(lat) * DEG2RAD) * sphereRadius;
+                const circumference = radius * Math.PI * 2;
+                const dotsForLat = Math.floor(circumference * dotDensity);
+
+                for (let x = 0; x < dotsForLat; x++) {
+                    const long = -180 + (x * 360) / dotsForLat;
+                    if (!visibilityForCoordinate(long, lat)) continue;
+
+                    const position = latLonToVector3(lat, long, sphereRadius + 0.005);
+
+                    const circle = new THREE.Mesh(circleGeometry, circleMaterial);
+                    circle.position.copy(position);
+                    circle.lookAt(new THREE.Vector3(0, 0, 0));
+                    dotGroup.add(circle);
+                }
+            }
+
+            //Optional Faint Sphere
+            const sphereGeometry = new THREE.SphereGeometry(sphereRadius, 32, 32);
+            const sphereMaterial = new THREE.MeshBasicMaterial({
+                color: 0x222222,
+                transparent: true,
+                opacity: 0.1,
+                side: THREE.BackSide
+            });
+            const visualSphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            scene.add(visualSphere);
+
+            // --- Animation ---
+            function animate() {
+                requestAnimationFrame(animate);
+                dotGroup.rotation.y += 0.002;
+                visualSphere.rotation.y += 0.002;
+                renderer.render(scene, camera);
+
+                // First frame transition logic (with delay)
+                if (!isFirstFrameRendered) {
+                    isFirstFrameRendered = true;
+                    setTimeout(transitionFromSVG, 50); // Delay of 50ms
+                }
+            }
+            animate();
+        }
+
+        // --- Utility Functions ---
+        function latLonToVector3(latitude, longitude, radius) {
+            const phi = (90 - latitude) * DEG2RAD;
+            const theta = (longitude + 180) * DEG2RAD;
+            const x = -(radius * Math.sin(phi) * Math.cos(theta));
+            const y = radius * Math.cos(phi);
+            const z = radius * Math.sin(phi) * Math.sin(theta);
+            return new THREE.Vector3(x, y, z);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // --- Web Animations API Transition ---
+        function transitionFromSVG() {
+            const placeholder = document.getElementById('placeholder');
+            const canvas = renderer.domElement;
+
+            const keyframesIn = [
+                { opacity: 0, transform: 'scale(0.8)' },
+                { opacity: 1, transform: 'scale(1)' }
+            ];
+            const keyframesOut = [
+                { opacity: 1, transform: 'scale(0.8)' },
+                { opacity: 0, transform: 'scale(1)' }
+            ];
+            const options = { fill: 'both', duration: 600, easing: 'ease' };
+
+            canvas.animate(keyframesIn, options);
+            const placeHolderAnim = placeholder.animate(keyframesOut, options);
+
+            placeHolderAnim.addEventListener('finish', () => {
+                placeholder.remove();
+                canvas.style.zIndex = '1'; // Ensure canvas is on top
+            });
+        }
+
+    </script>
+</body>
+</html>
