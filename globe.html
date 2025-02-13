@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Isaiah Dasen - Earth Sphere</title>
+    <title>Isaiah Dasen - GeoIP Globe</title>
     <style>
         /* Ensure these styles are applied IMMEDIATELY */
         html, body {
@@ -35,43 +35,54 @@
         /* Style for the return button */
         #returnButton {
           position: absolute;
-          top: 10%; /* Position from the top */
+          top: 10%;
           left: 50%;
-          transform: translateX(-50%); /* Center horizontally */
+          transform: translateX(-50%);
           z-index: 10;
-          color: rgba(0, 50, 100, 0.8); /* Darker blue */
-          font-size: 48px; /* 2x larger */
+          color: rgba(0, 50, 100, 0.8);
+          font-size: 48px;
           text-decoration: none;
           cursor: pointer;
-          transition: color 0.3s ease; /* Smooth color transition */
+          transition: color 0.3s ease;
         }
         #returnButton:hover{
-            color: rgba(0, 153, 255, 0.8); /* Lighter blue on hover */
+            color: rgba(0, 153, 255, 0.8);
         }
 
+        #ip-address {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(0, 255, 0, 0.7);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            z-index: 10;
+            pointer-events: none;
+            white-space: pre-line; /* Preserve line breaks */
+        }
+
+        /* Animation for the dots */
+        @keyframes dotAnimation {
+            0%, 100% { content: "# Connecting"; }
+            25%     { content: "# Connecting."; }
+            50%     { content: "# Connecting.."; }
+            75%     { content: "# Connecting..."; }
+        }
+
+        /* Apply animation to the ::before pseudo-element */
+        #connecting-text::before {
+            content: "# Connecting";
+            animation: dotAnimation 2s linear;
+        }
 
     </style>
     <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-    <script>
-        // Preload the image (optional, but can help)
-        const preloadImage = new Image();
-        preloadImage.src = 'world-map-small.png';
-
-        // Force initial render (use with caution)
-        window.onload = () => {
-            document.body.offsetHeight; // This forces a reflow
-
-        // --- (Rest of your Three.js code goes here) ---
-    </script>
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
     <div id="error-message" style="color: red;"></div>
-
     <div id="placeholder">
-       <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="128" cy="128" r="128" fill="url(#paint0_radial_10_2)"/>
             <defs>
                 <radialGradient id="paint0_radial_10_2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 128) rotate(90) scale(128)">
@@ -81,14 +92,19 @@
             </defs>
         </svg>
     </div>
-
     <canvas id="globe-canvas"></canvas>
-     <a id="returnButton" href="index.html" aria-label="Return to Homepage">
+    <a id="returnButton" href="index.html" aria-label="Return to Homepage">
         <i class="fas fa-home"></i>
     </a>
+    <div id="ip-address">
+        <div id="connecting-text"></div> </div>
 
     <script>
-        //Moved variables up
+
+        window.onload = () => {
+        document.body.offsetHeight;
+
+        // --- Three.js Code ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = 2.5;
@@ -99,6 +115,8 @@
 
         const sphereRadius = 1;
         const DEG2RAD = Math.PI / 180;
+        const locationPillarGroup = new THREE.Group(); // Group for location pillar
+        scene.add(locationPillarGroup);
 
         // --- Image Loading ---
         const loader = new THREE.TextureLoader();
@@ -108,7 +126,7 @@
         let isFirstFrameRendered = false;
 
         loader.load(
-            'world-map-small.png', // Local path
+            'world-map-small.png',
             (texture) => {
                 mapTexture = texture;
                 mapTexture.minFilter = THREE.NearestFilter;
@@ -138,7 +156,7 @@
             context.drawImage(image, 0, 0, imageWidth, imageHeight);
             try {
                 mapData = context.getImageData(0, 0, imageWidth, imageHeight).data;
-                createDottedGlobe(); // Create the globe
+                createDottedGlobe();
             } catch (e) {
                 console.error("Error getting image data:", e);
                 document.getElementById('error-message').textContent = 'Error processing image data.';
@@ -155,14 +173,15 @@
             return alpha >= 90;
         }
 
+
         // --- Circle Generation ---
         function createDottedGlobe() {
             const dotDensity = 25;
-            const rows = 100;
+            const rows = 120;
             const dotGroup = new THREE.Group();
             scene.add(dotGroup);
 
-            const circleGeometry = new THREE.CircleGeometry(0.005, 8);
+            const circleGeometry = new THREE.CircleGeometry(0.005, 8);  // Original size
             const circleMaterial = new THREE.ShaderMaterial({
                 uniforms: {
                     fadeThreshold: { value: 0.9 },
@@ -191,7 +210,7 @@
                             alpha = 1.0 + (fadeThreshold - z) * alphaFallOff;
                         }
 
-                        gl_FragColor = vec4(0.0, 1.0, 0.0, alpha);
+                        gl_FragColor = vec4(0.0, 1.0, 0.0, alpha); // Original green color
                         if (gl_FragColor.a <= 0.0) discard;
                     }
                 `,
@@ -234,16 +253,16 @@
                 requestAnimationFrame(animate);
                 dotGroup.rotation.y += 0.002;
                 visualSphere.rotation.y += 0.002;
+                locationPillarGroup.rotation.y += 0.002; // Rotate pillar group
                 renderer.render(scene, camera);
-
-                // First frame transition logic (with delay)
                 if (!isFirstFrameRendered) {
                     isFirstFrameRendered = true;
-                    setTimeout(transitionFromSVG, 50); // Delay of 50ms
+                    setTimeout(transitionFromSVG, 50);
                 }
             }
             animate();
         }
+
 
         // --- Utility Functions ---
         function latLonToVector3(latitude, longitude, radius) {
@@ -261,7 +280,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // --- Web Animations API Transition ---
+          // --- Web Animations API Transition ---
         function transitionFromSVG() {
             const placeholder = document.getElementById('placeholder');
             const canvas = renderer.domElement;
@@ -281,10 +300,95 @@
 
             placeHolderAnim.addEventListener('finish', () => {
                 placeholder.remove();
-                canvas.style.zIndex = '1'; // Ensure canvas is on top
+                canvas.style.zIndex = '1';
             });
         }
 
+        // --- IP Address and Location Display, and Location Pillar ---
+        async function getIPAddress() {
+            const ipAddressElement = document.getElementById('ip-address');
+            let ip = "<error>";
+            let lat = "<error>";
+            let lon = "<error>";
+
+            setTimeout(async () => {
+                const connectingText = document.getElementById('connecting-text');
+                if (connectingText) {
+                    connectingText.remove();
+                }
+                ipAddressElement.innerHTML = "# Connected<br>";
+
+                try {
+                    const ipResponse = await fetch('https://api.ipify.org?format=json');
+                    if (!ipResponse.ok) {
+                        throw new Error(`ipify.org HTTP error! Status: ${ipResponse.status}`);
+                    }
+                    const ipData = await ipResponse.json();
+                    ip = ipData.ip;
+
+                    const geoResponse = await fetch(`http://ip-api.com/json/${ip}`);
+                    if (!geoResponse.ok) {
+                        throw new Error(`ip-api.com HTTP error! Status: ${geoResponse.status}`);
+                    }
+                    const geoData = await geoResponse.json();
+
+                    if (geoData.status === 'success') {
+                        lat = geoData.lat;
+                        lon = geoData.lon;
+
+                        // --- Add Location Pillar ---
+                        addLocationPillar(lat, lon);
+
+                    } else {
+                        console.warn("ip-api.com failed:", geoData.message);
+                    }
+
+                } catch (error) {
+                    console.error('Error fetching IP or location:', error);
+                } finally {
+                    ipAddressElement.innerHTML += `# IP: ${ip}<br># Lat: ${lat}<br># Long: ${lon}`;
+                }
+            }, 2000);
+        }
+
+        function addLocationPillar(latitude, longitude) {
+            const basePosition = latLonToVector3(latitude, longitude, sphereRadius);
+            const topPosition = latLonToVector3(latitude, longitude, sphereRadius + 0.2); // Extend 0.2 units
+
+            const direction = new THREE.Vector3().subVectors(topPosition, basePosition);
+            const height = direction.length();
+
+            const pillarGeometry = new THREE.CylinderGeometry(0.005, 0.005, height, 8, 1, true); // Thin cylinder
+            const pillarMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff00, // Blue
+                transparent: true,
+                opacity: 0.2,  // Semi-transparent
+                side: THREE.DoubleSide // Render both sides
+            });
+
+            const pillarMesh = new THREE.Mesh(pillarGeometry, pillarMaterial);
+
+            // Position and orient the pillar
+            pillarMesh.position.copy(basePosition);  // Start at the base position
+            pillarMesh.lookAt(topPosition); // Point towards the top
+            pillarMesh.rotateX(Math.PI / 2);    // ThreeJS cylinders are Y-up. Rotate to be Z-up.
+
+            // Add a glowing effect (optional, using a second, larger cylinder)
+            const glowGeometry = new THREE.CylinderGeometry(0.01, 0.01, height, 8, 1, true);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.1,
+                side: THREE.BackSide // Important: Render only the *outside*
+            });
+            const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+            pillarMesh.add(glowMesh);  // Add glow as a *child* of the pillar
+
+            locationPillarGroup.add(pillarMesh); // Add to the group
+        }
+
+        getIPAddress();
+    };
     </script>
 </body>
 </html>
