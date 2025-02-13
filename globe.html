@@ -326,7 +326,7 @@
                     const ipData = await ipResponse.json();
                     ip = ipData.ip;
 
-                    const geoResponse = await fetch(`http://ip-api.com/json/${ip}`);
+                    const geoResponse = await fetch(`https://ip-api.com/json/${ip}`);
                     if (!geoResponse.ok) {
                         throw new Error(`ip-api.com HTTP error! Status: ${geoResponse.status}`);
                     }
