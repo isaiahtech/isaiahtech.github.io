@@ -101,3 +101,28 @@ canvas {
     background-color: red;
     border-radius: 0 18px 18px 0;
 }
+
+/* Globe Icon Styles */
+#globeIconContainer {
+    position: absolute;
+    top: calc(50% - 70px); /* Position above the text */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+#globeIconContainer a {
+    color: rgba(0, 153, 255, 0.8);
+    font-size: 36px; /* Adjust size as needed */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+#globeIconContainer a:hover {
+    color: limegreen; /* Changed to green on hover */
+}
+
+/* Change globe icon color when slider is active */
+#sliderIcon.active ~ #globeIconContainer a {
+    color: red;
+}
